@@ -359,6 +359,21 @@ body.chats-active .container :where(.app-header , .suggestions) {
     color:  var(--placeholder-color);
 }
 
+.app-header .logo-text {
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    background: linear-gradient(to left, #1d7efd , #8f6fff , #7b8cae , #eee);
+                background-clip: text;
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+    text-align: center;
+    display: block;
+    
+}
+
 .chat-container .bot-message.loading .avatar {
         animation: rotate 3s linear infinite;
     }
@@ -372,6 +387,11 @@ body.chats-active .container :where(.app-header , .suggestions) {
     @media (max-width: 768px) {
         .container {
             padding: 20px 0 120px;
+        }
+
+        .app-header .logo-text {
+        font-size: 1.4rem;
+
         }
 
         .app-header :is(.heading , .sub-heading) {
