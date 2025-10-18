@@ -63,11 +63,13 @@ const typingEffect = (text, textElement, botrMsgDiv) => {
     if (wordIndex < word.length) {
       textElement.textContent +=
         (wordIndex === 0 ? "" : " ") + word[wordIndex++];
-      scrollToBottom();
+      scrollToBottom(); // ✅ أثناء الكتابة
     } else {
       clearInterval(typingInterval);
       botrMsgDiv.classList.remove("loading");
       document.body.classList.remove("bot-responding");
+
+      scrollToBottom(); // ✅ بعد الانتهاء تأكد ننزل آخر شيء
     }
   }, 40);
 };
@@ -293,3 +295,19 @@ promptForm.addEventListener("submit", handelFormSubmit);
 promptForm
   .querySelector("#add-file-btn")
   .addEventListener("click", () => fileInput.click());
+
+function adjustChatPadding() {
+  const container = document.querySelector(".container");
+  const prompt = document.querySelector(".prompt-container");
+  if (!container || !prompt) return;
+
+  const promptHeight = prompt.offsetHeight;
+  container.style.paddingBottom = `${promptHeight + 20}px`; // 20px زيادة صغيرة مريحة
+}
+
+// شغّلها مرة عند تحميل الصفحة
+adjustChatPadding();
+
+// وأعد حسابها لو تغيّر حجم الشاشة أو تغيّر ارتفاع الـ prompt (مهم للموبايل)
+window.addEventListener("resize", adjustChatPadding);
+window.addEventListener("orientationchange", adjustChatPadding);
