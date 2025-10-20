@@ -26,8 +26,8 @@ const themeToggle = document.querySelector("#theme-toggle-btn");
 // =============================
 // API Setup
 // =============================
-const API_KEY = "AIzaSyBFPKAARPqe0-gAVRvqoZD7LGTE1aums2c";
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
+
+const API_URL = "https://chatbot-nu-livid.vercel.app/api/chat";
 
 // =============================
 // Global Variables
