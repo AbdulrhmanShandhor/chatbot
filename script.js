@@ -82,56 +82,33 @@ const typingEffect = (text, textElement, botrMsgDiv) => {
  * هذا يحل مشكلة ReferenceError: userMessage is not defined
  */
 const generateResponse = async (userMessage, botrMsgDiv) => {
-  const textElement = botrMsgDiv.querySelector(".message-text"); // 🔹 Feature: bot responds with its name and creator info // ✳️ الآن يمكن استخدام userMessage لأنه تم تمريره كمعامل
+  const textElement = botrMsgDiv.querySelector(".message-text");
+  textElement.textContent = "";
   controller = new AbortController();
 
-  const lowerMsg = userMessage.toLowerCase(); // Check if user is asking about bot's name or creator
-
+  // تحقق من أسئلة اسم البوت أو المطور
+  const lowerMsg = userMessage.toLowerCase();
   const isAskingAboutNameOrCreator =
     lowerMsg.includes("اسمك") ||
     lowerMsg.includes("مين طورك") ||
-    lowerMsg.includes("من طورك") ||
-    lowerMsg.includes("مين صنعك") ||
     lowerMsg.includes("who made you") ||
-    lowerMsg.includes("your name") ||
-    lowerMsg.includes("developer") ||
-    lowerMsg.includes("creator") ||
-    lowerMsg.includes("what is your name") ||
-    lowerMsg.includes("اش اسمك") ||
-    lowerMsg.includes("ماهو اسمك");
+    lowerMsg.includes("your name");
 
   if (isAskingAboutNameOrCreator) {
-    let reply = ""; // Detect message language (Arabic or English)
-
-    if (/[أ-ي]/.test(userMessage)) {
-      reply = "اسمي Shandhor، والي طورني هو عبدالرحمن 💻";
-    } else {
-      reply = "My name is Shandhor, and I was created by Abdulrhman 💻";
-    }
-
+    const reply = /[أ-ي]/.test(userMessage)
+      ? "اسمي Shandhor، والي طورني هو عبدالرحمن 💻"
+      : "My name is Shandhor, and I was created by Abdulrhman 💻";
     textElement.textContent = reply;
-    botrMsgDiv.classList.remove("loading"); // إزالة حالة التحميل
-    return; // Stop here (don’t call the API)
-  } // Add user message and file data to chat history & search about this code
+    botrMsgDiv.classList.remove("loading");
+    return;
+  }
 
   chatHistory.push({
     role: "user",
-    parts: [
-      { text: userData.message },
-      ...(userData.file.data
-        ? [
-            {
-              inline_data: (({ fileName, isImage, ...rest }) => rest)(
-                userData.file
-              ),
-            },
-          ]
-        : []),
-    ],
+    parts: [{ text: userMessage }],
   });
 
   try {
-    // Send chat history to API
     const response = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -139,26 +116,33 @@ const generateResponse = async (userMessage, botrMsgDiv) => {
       signal: controller.signal,
     });
 
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error.message); // Get the bot response and show it with typing effect
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
 
-    const botMessage = data.candidates[0].content.parts[0].text
-      .replaceAll(/\*\*([^*]+)\*\*/g, "$1")
-      .trim();
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value);
+      textElement.textContent += chunk;
+      scrollToBottom();
+    }
 
-    typingEffect(botMessage, textElement, botrMsgDiv);
-    chatHistory.push({ role: "model", parts: [{ text: botMessage }] });
-    // console.log(chatHistory);
-  } catch (error) {
-    // console.log(error);
+    botrMsgDiv.classList.remove("loading");
+    document.body.classList.remove("bot-responding");
+
+    chatHistory.push({
+      role: "model",
+      parts: [{ text: textElement.textContent }],
+    });
+  } catch (err) {
     textElement.style.color = "#d62939";
     textElement.textContent =
-      error.name === "AbortError" ? "Response Generation Stop." : error.message;
+      err.name === "AbortError" ? "Response Generation Stopped." : err.message;
     botrMsgDiv.classList.remove("loading");
     document.body.classList.remove("bot-responding");
     scrollToBottom();
   } finally {
-    userData.file = {}; // Clear file data after each submission
+    userData.file = {}; // مسح بيانات الملفات بعد كل رد
   }
 };
 

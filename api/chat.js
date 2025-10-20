@@ -12,8 +12,23 @@ export default async function handler(req, res) {
       }
     );
 
-    const data = await response.json();
-    res.status(response.status).json(data);
+    // إعداد Streaming
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value);
+      // أرسل chunk مباشرة للfrontend
+      res.write(`data: ${chunk}\n\n`);
+    }
+
+    res.end();
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
