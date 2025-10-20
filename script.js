@@ -71,7 +71,7 @@ const typingEffect = (text, textElement, botrMsgDiv) => {
 
       scrollToBottom(); // ✅ بعد الانتهاء تأكد ننزل آخر شيء
     }
-  }, 10);
+  }, 20);
 };
 
 // =============================
@@ -82,33 +82,56 @@ const typingEffect = (text, textElement, botrMsgDiv) => {
  * هذا يحل مشكلة ReferenceError: userMessage is not defined
  */
 const generateResponse = async (userMessage, botrMsgDiv) => {
-  const textElement = botrMsgDiv.querySelector(".message-text");
-  textElement.textContent = "";
+  const textElement = botrMsgDiv.querySelector(".message-text"); // 🔹 Feature: bot responds with its name and creator info // ✳️ الآن يمكن استخدام userMessage لأنه تم تمريره كمعامل
   controller = new AbortController();
 
-  // تحقق من أسئلة اسم البوت أو المطور
-  const lowerMsg = userMessage.toLowerCase();
+  const lowerMsg = userMessage.toLowerCase(); // Check if user is asking about bot's name or creator
+
   const isAskingAboutNameOrCreator =
     lowerMsg.includes("اسمك") ||
     lowerMsg.includes("مين طورك") ||
+    lowerMsg.includes("من طورك") ||
+    lowerMsg.includes("مين صنعك") ||
     lowerMsg.includes("who made you") ||
-    lowerMsg.includes("your name");
+    lowerMsg.includes("your name") ||
+    lowerMsg.includes("developer") ||
+    lowerMsg.includes("creator") ||
+    lowerMsg.includes("what is your name") ||
+    lowerMsg.includes("اش اسمك") ||
+    lowerMsg.includes("ماهو اسمك");
 
   if (isAskingAboutNameOrCreator) {
-    const reply = /[أ-ي]/.test(userMessage)
-      ? "اسمي Shandhor، والي طورني هو عبدالرحمن 💻"
-      : "My name is Shandhor, and I was created by Abdulrhman 💻";
+    let reply = ""; // Detect message language (Arabic or English)
+
+    if (/[أ-ي]/.test(userMessage)) {
+      reply = "اسمي Shandhor، والي طورني هو عبدالرحمن 💻";
+    } else {
+      reply = "My name is Shandhor, and I was created by Abdulrhman 💻";
+    }
+
     textElement.textContent = reply;
-    botrMsgDiv.classList.remove("loading");
-    return;
-  }
+    botrMsgDiv.classList.remove("loading"); // إزالة حالة التحميل
+    return; // Stop here (don’t call the API)
+  } // Add user message and file data to chat history & search about this code
 
   chatHistory.push({
     role: "user",
-    parts: [{ text: userMessage }],
+    parts: [
+      { text: userData.message },
+      ...(userData.file.data
+        ? [
+            {
+              inline_data: (({ fileName, isImage, ...rest }) => rest)(
+                userData.file
+              ),
+            },
+          ]
+        : []),
+    ],
   });
 
   try {
+    // Send chat history to API
     const response = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -116,33 +139,26 @@ const generateResponse = async (userMessage, botrMsgDiv) => {
       signal: controller.signal,
     });
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder("utf-8");
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error.message); // Get the bot response and show it with typing effect
 
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value);
-      textElement.textContent += chunk;
-      scrollToBottom();
-    }
+    const botMessage = data.candidates[0].content.parts[0].text
+      .replaceAll(/\*\*([^*]+)\*\*/g, "$1")
+      .trim();
 
-    botrMsgDiv.classList.remove("loading");
-    document.body.classList.remove("bot-responding");
-
-    chatHistory.push({
-      role: "model",
-      parts: [{ text: textElement.textContent }],
-    });
-  } catch (err) {
+    typingEffect(botMessage, textElement, botrMsgDiv);
+    chatHistory.push({ role: "model", parts: [{ text: botMessage }] });
+    // console.log(chatHistory);
+  } catch (error) {
+    // console.log(error);
     textElement.style.color = "#d62939";
     textElement.textContent =
-      err.name === "AbortError" ? "Response Generation Stopped." : err.message;
+      error.name === "AbortError" ? "Response Generation Stop." : error.message;
     botrMsgDiv.classList.remove("loading");
     document.body.classList.remove("bot-responding");
     scrollToBottom();
   } finally {
-    userData.file = {}; // مسح بيانات الملفات بعد كل رد
+    userData.file = {}; // Clear file data after each submission
   }
 };
 
