@@ -71,7 +71,7 @@ const typingEffect = (text, textElement, botrMsgDiv) => {
 
       scrollToBottom(); // ✅ بعد الانتهاء تأكد ننزل آخر شيء
     }
-  }, 40);
+  }, 10);
 };
 
 // =============================
